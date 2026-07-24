@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          # setup-java errors if `cache: maven` is set but no pom.xml exists
+          # anywhere in the repo, which is the case until Phase 2. Only
+          # enable caching once a services/*/pom.xml actually shows up.
+          cache: ${{ hashFiles('services/**/pom.xml') != '' && 'maven' || '' }}
+
+      - name: Build & test Maven modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          modules=(services/*/pom.xml)
+          if [ ${#modules[@]} -eq 0 ]; then
+            echo "No Maven modules under services/ yet — nothing to build."
+            exit 0
+          fi
+          for pom in "${modules[@]}"; do
+            dir=$(dirname "$pom")
+            echo "::group::Building $dir"
+            mvn -B -f "$pom" verify
+            echo "::endgroup::"
+          done
