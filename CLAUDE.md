@@ -8,7 +8,7 @@ A learning project for the AWS integration pattern **DynamoDB Streams → Lambda
 
 This is plumbing practice, not a product — business/fraud logic is deliberately thin. See `README.md` for the full scenario, architecture diagram, and the "Explicitly out of scope" list (no real fraud detection, no real notifications, no frontend/API, no HA/multi-region work).
 
-**Current state:** only `README.md` and `ACTION_PLAN.md` exist. No Terraform, Lambda code, or CI has been written yet — everything under "Repository layout" below is the *target* layout, not what's present now.
+**Current state:** Phase 0 (repo/environment scaffolding) is done — Git Flow branches, CI skeleton, LocalStack `docker-compose.yml`, and the Terraform root/module structure exist. No actual Terraform resources or Lambda/Maven code exist yet (Phases 1+); Terraform modules are placeholder stubs and `services/` doesn't exist yet.
 
 ## Working agreement (from ACTION_PLAN.md) — read before writing any code
 
@@ -21,6 +21,10 @@ This repo is driven phase-by-phase from `ACTION_PLAN.md`, using **Spec-Driven De
 5. Don't jump ahead — each phase in `ACTION_PLAN.md` assumes prior phases are already merged. If a phase seems to drift into an out-of-scope area (per `README.md`), stop and flag it rather than expanding scope silently.
 
 Branching is Git Flow: work happens on `feature/<phase-slug>` branches PR'd into `develop`; `develop` → `release/*` → `main` only when a batch of phases is ready to hit the real AWS sandbox account.
+
+Commits follow **Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `test:`, `refactor:`) across the whole project, not just for scaffolding work. Keep commits atomic per concern (e.g. don't mix a CI change with a Terraform change in one commit).
+
+There is no separate changelog/logbook file — `specs/NN-*.md` captures intent per phase and git history (commits + PR descriptions) captures what actually happened. Don't reintroduce a duplicate log.
 
 ## Architecture
 
@@ -86,7 +90,9 @@ Key design point: DynamoDB Streams natively support at most 2 direct Lambda cons
 
 ## Commands
 
-No build, lint, or test tooling exists yet (no Maven modules, Terraform, or CI config have been created). Once Phase 0 scaffolding lands, update this section with the actual `mvn`/`terraform`/`docker-compose` commands rather than guessing at them now.
+- **LocalStack:** `docker compose up -d` (starts dynamodb/sns/sqs/lambda on `localhost:4566`); health check at `http://localhost:4566/_localstack/health`.
+- **Terraform:** run from `terraform/envs/localstack/` or `terraform/envs/aws/` (not the repo root — there's no root module). `terraform init` / `terraform plan` / `terraform apply` as usual; no backend config needed (local state).
+- **Java/Maven builds:** no `services/*` modules exist yet (Phases 2 and 4 add `stream-processor` and `fraud-review-consumer`). Once they exist, build/test with `mvn -f services/<module>/pom.xml verify`; CI (`.github/workflows/ci.yml`) auto-discovers every `services/*/pom.xml`, so no CI edits are needed when adding a module.
 
 ## Cost hygiene
 
