@@ -16,7 +16,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-          cache: maven
+          # setup-java errors if `cache: maven` is set but no pom.xml exists
+          # anywhere in the repo, which is the case until Phase 2. Only
+          # enable caching once a services/*/pom.xml actually shows up.
+          cache: ${{ hashFiles('services/**/pom.xml') != '' && 'maven' || '' }}
 
       - name: Build & test Maven modules
         shell: bash
