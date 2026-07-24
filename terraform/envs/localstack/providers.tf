@@ -15,5 +15,8 @@ provider "aws" {
     sns      = "http://localhost:4566"
     sqs      = "http://localhost:4566"
     lambda   = "http://localhost:4566"
+    iam      = "http://localhost:4566"
+    sts      = "http://localhost:4566"
+    logs     = "http://localhost:4566"
   }
 }
