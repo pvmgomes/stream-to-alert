@@ -36,7 +36,7 @@ architecture this plan builds toward.
 - Spec: `specs/01-transactions-table.md`
 
 ## Phase 2 — Stream processor Lambda
-- New Maven module `services/stream-processor` (Java 25).
+- New Maven module `services/stream-processor` (Java 21).
 - Event source mapping: DynamoDB Stream → this Lambda.
 - Logic: parse stream record, compare `amount` to threshold (env var,
   default `10000`), publish enriched JSON to `transaction-alerts` SNS topic
@@ -60,7 +60,7 @@ architecture this plan builds toward.
 ## Phase 4 — Fraud review consumer Lambda + table
 - Terraform: `FraudReviewCases` DynamoDB table (PK `transactionId` or a
   generated `caseId` — decide in the spec).
-- New Maven module `services/fraud-review-consumer` (Java 25).
+- New Maven module `services/fraud-review-consumer` (Java 21).
 - SQS-triggered Lambda (`ReportBatchItemFailures` for partial batch
   handling, matching the pattern from the earlier SNS→SQS→Lambda→SNS
   sketch).

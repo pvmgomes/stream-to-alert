@@ -32,7 +32,7 @@ There is no separate changelog/logbook file — `specs/NN-*.md` captures intent 
 Transactions (DynamoDB, Streams: NEW_IMAGE)
         │ (event source mapping)
         ▼
-stream-processor (Lambda, Java 25)
+stream-processor (Lambda, Java 21)
    filters: amount > threshold
         │ sns:Publish
         ▼
@@ -43,7 +43,7 @@ transaction-alerts (SNS topic)
 fraud-review-queue        customer-notification-queue
    │ (event source mapping)      (unconsumed / stub)
    ▼
-fraud-review-consumer (Lambda, Java 25)
+fraud-review-consumer (Lambda, Java 21)
         │
         ▼
 FraudReviewCases (DynamoDB)
@@ -55,7 +55,7 @@ Key design point: DynamoDB Streams natively support at most 2 direct Lambda cons
 
 | Concern | Choice |
 |---|---|
-| Lambda language/runtime | Java 25 (Maven) |
+| Lambda language/runtime | Java 21 (Maven) |
 | IaC | Terraform (local state — no remote backend for this project) |
 | Local iteration | LocalStack (via Docker) |
 | Real deploy target | AWS sandbox account (never shared/production) |
@@ -79,8 +79,8 @@ Key design point: DynamoDB Streams natively support at most 2 direct Lambda cons
 │       ├── localstack/
 │       └── aws/
 ├── services/
-│   ├── stream-processor/         # Java 25 Maven module
-│   └── fraud-review-consumer/    # Java 25 Maven module
+│   ├── stream-processor/         # Java 21 Maven module
+│   └── fraud-review-consumer/    # Java 21 Maven module
 ├── docker-compose.yml            # LocalStack
 └── .github/workflows/
     ├── ci.yml
