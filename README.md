@@ -34,7 +34,7 @@ A bank records transactions (deposits, withdrawals, transfers) in a
 Transactions (DynamoDB, Streams: NEW_IMAGE)
         │ (event source mapping)
         ▼
-stream-processor (Lambda, Java 25)
+stream-processor (Lambda, Java 21)
    filters: amount > threshold
         │ sns:Publish
         ▼
@@ -45,7 +45,7 @@ transaction-alerts (SNS topic)
 fraud-review-queue        customer-notification-queue
    │ (event source mapping)      (unconsumed / stub)
    ▼
-fraud-review-consumer (Lambda, Java 25)
+fraud-review-consumer (Lambda, Java 21)
         │
         ▼
 FraudReviewCases (DynamoDB)
@@ -55,7 +55,7 @@ FraudReviewCases (DynamoDB)
 
 | Concern | Choice |
 |---|---|
-| Lambda language/runtime | Java 25 (Maven) |
+| Lambda language/runtime | Java 21 (Maven) |
 | IaC | Terraform |
 | Local iteration | LocalStack (via Docker) |
 | Real deploy target | Your AWS sandbox account |
@@ -89,7 +89,7 @@ history.
 - AWS account with programmatic access (sandbox/dev, not shared/production)
 - Terraform >= 1.7
 - Docker (for LocalStack)
-- Java 25 + Maven
+- Java 21 + Maven
 - A GitHub repository with Actions enabled
 
 ## Repository layout (target)
@@ -109,8 +109,8 @@ history.
 │       ├── localstack/
 │       └── aws/
 ├── services/
-│   ├── stream-processor/         # Java 25 Maven module
-│   └── fraud-review-consumer/    # Java 25 Maven module
+│   ├── stream-processor/         # Java 21 Maven module
+│   └── fraud-review-consumer/    # Java 21 Maven module
 ├── docker-compose.yml            # LocalStack
 └── .github/workflows/
     ├── ci.yml

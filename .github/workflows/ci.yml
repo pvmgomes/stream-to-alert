@@ -11,14 +11,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 25
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "25"
+          java-version: "21"
           # setup-java errors if `cache: maven` is set but no pom.xml exists
-          # anywhere in the repo, which is the case until Phase 2. Only
-          # enable caching once a services/*/pom.xml actually shows up.
+          # anywhere in the repo. Only enable caching once a
+          # services/*/pom.xml actually shows up.
           cache: ${{ hashFiles('services/**/pom.xml') != '' && 'maven' || '' }}
 
       - name: Build & test Maven modules
