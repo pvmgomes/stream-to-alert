@@ -9,9 +9,25 @@ module "transactions_table" {
 }
 
 module "transaction_alerts_topic" {
-  source = "../../modules/sns-sqs-fanout"
+  source = "../../modules/sns-topic"
 
   topic_name = "transaction-alerts"
+}
+
+module "fraud_review_queue" {
+  source = "../../modules/sqs-fanout-subscriber"
+
+  queue_name = "fraud-review-queue"
+  topic_arn  = module.transaction_alerts_topic.topic_arn
+  create_dlq = true
+}
+
+module "customer_notification_queue" {
+  source = "../../modules/sqs-fanout-subscriber"
+
+  queue_name = "customer-notification-queue"
+  topic_arn  = module.transaction_alerts_topic.topic_arn
+  create_dlq = false
 }
 
 module "stream_processor" {
