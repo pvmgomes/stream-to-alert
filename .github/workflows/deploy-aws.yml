@@ -12,6 +12,10 @@ jobs:
   deploy:
     name: Deploy to AWS sandbox
     runs-on: ubuntu-latest
+    # No required-reviewer gate: environment protection rules (and branch
+    # protection, and rulesets) all require GitHub Pro/Team/Enterprise on
+    # private repos — confirmed via the API, not assumed. See
+    # specs/05-cicd-pipeline.md's runbook step 5 addendum.
     environment: aws-sandbox
     steps:
       - name: Checkout

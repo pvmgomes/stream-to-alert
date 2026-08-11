@@ -185,10 +185,25 @@ Variables* → **New repository variable** → name `AWS_DEPLOY_ROLE_ARN`,
 value the role ARN.
 
 **5. Create the `aws-sandbox` GitHub Environment**: *Settings →
-Environments* → **New environment** → name `aws-sandbox` → add yourself
-as a required reviewer. `deploy-aws.yml` targets this environment, so
-every run pauses for your manual approval before touching the real
-account.
+Environments* → **New environment** → name `aws-sandbox`.
+
+**Addendum — required reviewers turned out not to be available:**
+confirmed directly against the GitHub API (not just the UI) that
+environment protection rules (required reviewers) *and* classic branch
+protection *and* the newer repository rulesets are all blocked with
+"Upgrade to GitHub Pro or make this repository public to enable this
+feature" — this repo is private, and GitHub Free doesn't include any
+server-side merge/deploy gating for private repos, not just the
+environment-reviewers feature originally planned. Decision: skip the
+gate for now rather than upgrade the plan or make the repo public. The
+`aws-sandbox` environment still exists (`deploy-aws.yml` targets it, so
+it's ready to gain a required reviewer for free the moment this repo
+either goes public or moves to a paid plan) but currently enforces
+nothing — the real checkpoint is that nothing in this project auto-merges
+to `main`; every merge so far has been a deliberate, human-clicked PR
+merge, which is already the point at which a real deploy becomes
+possible. You can also watch/cancel a run from the Actions tab before it
+reaches `terraform apply`.
 
 ### `.github/workflows/deploy-localstack.yml` (new)
 
@@ -206,10 +221,10 @@ test still cleans up the runner).
 Trigger: `on: push: branches: [main]`.
 
 `permissions: id-token: write, contents: read` (required for OIDC).
-`environment: aws-sandbox` — you configure this GitHub Environment with
-yourself as a required reviewer via the repo's Settings → Environments UI
-(simple enough to not need scripting; I'll point you to it rather than
-guess at reviewer IDs through the API).
+`environment: aws-sandbox` — targets the environment created in the
+runbook above. No required reviewer is enforced (see the addendum to
+runbook step 5): private-repo + GitHub Free blocks this feature
+entirely, confirmed via the API rather than assumed.
 
 Steps: checkout → set up JDK 21 → `mvn package` both `services/*` modules
 → `aws-actions/configure-aws-credentials@v4` with
@@ -240,8 +255,10 @@ on any assertion failure or timeout (default timeout: 30s, polling every
 - [ ] OIDC identity provider + deploy role created via the AWS Console
       runbook above; `AWS_DEPLOY_ROLE_ARN` repo variable set from the
       role's ARN.
-- [ ] `aws-sandbox` GitHub Environment created with a required reviewer
-      (you, via the GitHub UI).
+- [ ] `aws-sandbox` GitHub Environment created. Required reviewer
+      deliberately not configured — unavailable on this repo's
+      private+Free plan combination (confirmed via API); see the
+      addendum to runbook step 5.
 - [ ] `scripts/smoke-test-localstack.sh` implemented and runnable locally
       against a `docker compose up -d` LocalStack instance.
 - [ ] `.github/workflows/deploy-localstack.yml` implemented per the
