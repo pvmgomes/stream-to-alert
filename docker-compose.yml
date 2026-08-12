@@ -1,0 +1,18 @@
+services:
+  localstack:
+    image: localstack/localstack:3
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=dynamodb,sns,sqs,lambda,iam,logs
+      - DEBUG=0
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      # LocalStack runs each Lambda invocation in a sibling Docker container,
+      # so it needs access to the host's Docker socket to spawn them.
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

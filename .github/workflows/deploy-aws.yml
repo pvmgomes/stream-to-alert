@@ -1,0 +1,62 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to AWS sandbox
+    runs-on: ubuntu-latest
+    # No required-reviewer gate: environment protection rules (and branch
+    # protection, and rulesets) all require GitHub Pro/Team/Enterprise on
+    # private repos — confirmed via the API, not assumed. See
+    # specs/05-cicd-pipeline.md's runbook step 5 addendum.
+    environment: aws-sandbox
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build Maven modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          for pom in services/*/pom.xml; do
+            dir=$(dirname "$pom")
+            echo "::group::Building $dir"
+            mvn -B -f "$pom" package
+            echo "::endgroup::"
+          done
+
+      # Assumes the OIDC identity provider and AWS_DEPLOY_ROLE_ARN repo
+      # variable already exist — see specs/05-cicd-pipeline.md's manual
+      # AWS Console runbook (one-time setup, not automated here).
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: sa-east-1
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Terraform init
+        working-directory: terraform/envs/aws
+        run: terraform init
+
+      - name: Terraform apply
+        working-directory: terraform/envs/aws
+        run: terraform apply -auto-approve
