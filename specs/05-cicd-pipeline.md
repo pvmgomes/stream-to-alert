@@ -140,6 +140,25 @@ repos/roles that use it):
 - Skip attaching a managed policy on the "Add permissions" step — attach
   the inline policy in step 3 instead.
 - Name: `github-actions-deploy-stream-to-alert`. Create role.
+- **After creating the role, edit its trust policy** (IAM → Roles →
+  this role → *Trust relationships* → **Edit trust policy**) — the
+  console wizard's generated `sub` condition doesn't actually work as-is.
+  GitHub's real OIDC tokens include numeric ID qualifiers alongside the
+  org/repo names (`repo:pvmgomes@<user-id>/stream-to-alert@<repo-id>:ref:...`),
+  confirmed via CloudTrail during Phase 6's first real deploy attempt (see
+  `specs/06-real-aws-validation.md`) — the console's plain
+  `repo:pvmgomes/stream-to-alert:ref:refs/heads/main` pattern never
+  actually matches anything. Replace the `sub` condition's `StringLike`
+  list with both forms so it works regardless of whether GitHub is
+  sending ID-qualified subjects for this token type:
+  ```json
+  "StringLike": {
+    "token.actions.githubusercontent.com:sub": [
+      "repo:pvmgomes/stream-to-alert:ref:refs/heads/main",
+      "repo:pvmgomes@*/stream-to-alert@*:ref:refs/heads/main"
+    ]
+  }
+  ```
 
 **3. Attach an inline policy** scoped to the six AWS services this
 project uses, with `iam:*` further restricted to this project's Lambda
