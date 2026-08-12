@@ -12,11 +12,15 @@ jobs:
   deploy:
     name: Deploy to AWS sandbox
     runs-on: ubuntu-latest
-    # No required-reviewer gate: environment protection rules (and branch
-    # protection, and rulesets) all require GitHub Pro/Team/Enterprise on
-    # private repos — confirmed via the API, not assumed. See
-    # specs/05-cicd-pipeline.md's runbook step 5 addendum.
-    environment: aws-sandbox
+    # Deliberately not targeting the aws-sandbox environment: doing so
+    # switches the OIDC token's `sub` claim from the branch-based format
+    # (repo:OWNER/REPO:ref:refs/heads/main) to an environment-based one
+    # (repo:OWNER/REPO:environment:aws-sandbox), which the IAM role's
+    # trust policy doesn't match — and since environment protection rules
+    # are unavailable on this plan anyway (see
+    # specs/05-cicd-pipeline.md's runbook step 5 addendum), there was no
+    # upside to referencing it, only this OIDC breakage. See
+    # specs/06-real-aws-validation.md for how this was diagnosed.
     steps:
       - name: Checkout
         uses: actions/checkout@v4

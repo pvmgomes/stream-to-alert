@@ -149,6 +149,24 @@ Steps:
   auth never would have caught), that's handled as its own fix, not
   silently folded into this spec's scope.
 
+## Issues found during validation
+
+- **`deploy-aws.yml`'s first real run failed at the OIDC auth step**
+  (`Not authorized to perform sts:AssumeRoleWithWebIdentity`), before
+  Terraform ever ran. Root cause, confirmed via CloudTrail: the job's
+  `environment: aws-sandbox` reference (added in Phase 5) changes
+  GitHub's OIDC token subject from
+  `repo:pvmgomes/stream-to-alert:ref:refs/heads/main` to
+  `repo:pvmgomes/stream-to-alert:environment:aws-sandbox`, which the
+  Phase 5 runbook's trust policy — written assuming the branch-based
+  format — didn't match. This is exactly the kind of real-AWS-only gap
+  called out in "Out of scope" above (LocalStack has no OIDC/IAM layer at
+  all, so nothing before this phase could have caught it). Fixed by
+  dropping `environment: aws-sandbox` from `deploy-aws.yml` rather than
+  updating the trust policy, since the environment wasn't enforcing
+  anything anyway (see `specs/05-cicd-pipeline.md`'s second addendum to
+  runbook step 5). No AWS-side change was needed.
+
 ## Definition of done
 
 - [ ] `scripts/smoke-test-aws.sh` implemented per the contract above.
