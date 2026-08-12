@@ -1,0 +1,72 @@
+name: Deploy to LocalStack
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy-and-smoke-test:
+    name: Deploy & smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build Maven modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          for pom in services/*/pom.xml; do
+            dir=$(dirname "$pom")
+            echo "::group::Building $dir"
+            mvn -B -f "$pom" package
+            echo "::endgroup::"
+          done
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Start LocalStack
+        run: docker compose up -d
+
+      - name: Wait for LocalStack
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 30); do
+            if curl -sf http://localhost:4566/_localstack/health >/dev/null 2>&1; then
+              echo "LocalStack is healthy"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "LocalStack did not become healthy in time" >&2
+          exit 1
+
+      - name: Terraform init
+        working-directory: terraform/envs/localstack
+        run: terraform init
+
+      - name: Terraform apply
+        working-directory: terraform/envs/localstack
+        run: terraform apply -auto-approve
+
+      - name: Run end-to-end smoke test
+        run: scripts/smoke-test-localstack.sh
+
+      - name: Terraform destroy
+        if: always()
+        working-directory: terraform/envs/localstack
+        run: terraform destroy -auto-approve
+
+      - name: Stop LocalStack
+        if: always()
+        run: docker compose down
