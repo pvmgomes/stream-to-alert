@@ -196,14 +196,29 @@ feature" — this repo is private, and GitHub Free doesn't include any
 server-side merge/deploy gating for private repos, not just the
 environment-reviewers feature originally planned. Decision: skip the
 gate for now rather than upgrade the plan or make the repo public. The
-`aws-sandbox` environment still exists (`deploy-aws.yml` targets it, so
-it's ready to gain a required reviewer for free the moment this repo
-either goes public or moves to a paid plan) but currently enforces
+`aws-sandbox` environment still exists but currently enforces
 nothing — the real checkpoint is that nothing in this project auto-merges
 to `main`; every merge so far has been a deliberate, human-clicked PR
 merge, which is already the point at which a real deploy becomes
 possible. You can also watch/cancel a run from the Actions tab before it
 reaches `terraform apply`.
+
+**Second addendum (Phase 6) — `deploy-aws.yml` stopped targeting this
+environment entirely:** referencing `environment: aws-sandbox` in the job
+turned out to actively break OIDC auth, not just fail to add protection.
+GitHub changes the token's `sub` claim format for any job that references
+an environment — from `repo:OWNER/REPO:ref:refs/heads/main` to
+`repo:OWNER/REPO:environment:aws-sandbox` — which the trust policy from
+step 2 above doesn't match, since it was written assuming the
+branch-based format. Diagnosed via CloudTrail during Phase 6's first real
+deploy attempt (see `specs/06-real-aws-validation.md`). Since the
+environment wasn't providing any enforcement anyway (per the first
+addendum), the fix was to drop `environment: aws-sandbox` from
+`deploy-aws.yml` rather than update the trust policy — restores the
+working branch-based subject with no AWS-side change needed. The
+`aws-sandbox` environment itself still exists (harmless, unreferenced)
+in case it becomes useful again if this repo ever goes public or moves to
+a paid plan.
 
 ### `.github/workflows/deploy-localstack.yml` (new)
 
@@ -220,11 +235,11 @@ test still cleans up the runner).
 
 Trigger: `on: push: branches: [main]`.
 
-`permissions: id-token: write, contents: read` (required for OIDC).
-`environment: aws-sandbox` — targets the environment created in the
-runbook above. No required reviewer is enforced (see the addendum to
-runbook step 5): private-repo + GitHub Free blocks this feature
-entirely, confirmed via the API rather than assumed.
+`permissions: id-token: write, contents: read` (required for OIDC). Does
+*not* set `environment:` — see the second addendum to runbook step 5:
+doing so changes the OIDC token's subject format and broke role
+assumption entirely, for an environment that wasn't enforcing anything
+anyway.
 
 Steps: checkout → set up JDK 21 → `mvn package` both `services/*` modules
 → `aws-actions/configure-aws-credentials@v4` with
