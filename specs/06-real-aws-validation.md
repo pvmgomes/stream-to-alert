@@ -167,17 +167,34 @@ Steps:
   anything anyway (see `specs/05-cicd-pipeline.md`'s second addendum to
   runbook step 5). No AWS-side change was needed.
 
+- **Second real run still failed at the same OIDC step**, even after the
+  fix above restored the branch-based subject format. CloudTrail showed
+  GitHub's actual subject as
+  `repo:pvmgomes@6145157/stream-to-alert@1311029605:ref:refs/heads/main`
+  — GitHub OIDC tokens include numeric ID qualifiers alongside the
+  org/repo names, which the AWS Console role-creation wizard's generated
+  trust policy (plain `repo:pvmgomes/stream-to-alert:ref:refs/heads/main`,
+  no ID suffixes) never accounted for. Fixed by widening the trust
+  policy's `sub` condition to a `StringLike` list covering both the plain
+  and ID-qualified forms — see the updated runbook step 2 in
+  `specs/05-cicd-pipeline.md`. Applied directly to the real role's trust
+  policy; the runbook itself is updated so recreating this role from
+  scratch would get it right the first time.
+
 ## Definition of done
 
-- [ ] `scripts/smoke-test-aws.sh` implemented per the contract above.
-- [ ] `develop` merged into `main` (with your explicit go-ahead
-      immediately before), `deploy-aws.yml` runs and succeeds.
-- [ ] `scripts/smoke-test-aws.sh` run against the real account (with your
+- [x] `scripts/smoke-test-aws.sh` implemented per the contract above.
+- [x] `develop` merged into `main` (with your explicit go-ahead
+      immediately before), `deploy-aws.yml` runs and succeeds. Took three
+      attempts — see "Issues found during validation" above.
+- [x] `scripts/smoke-test-aws.sh` run against the real account (with your
       explicit go-ahead immediately before) and passes.
-- [ ] CloudWatch Logs for both Lambdas inspected and match the "success"
+- [x] CloudWatch Logs for both Lambdas inspected and match the "success"
       pattern in the checklist above for the smoke test's notable
       transaction.
-- [ ] Work done on `feature/06-real-aws-validation`, PR'd into `develop`
+- [x] Work done on `feature/06-real-aws-validation`, PR'd into `develop`
       (the script and checklist are the artifacts; the validation run
       itself isn't a code change to merge, but the PR captures the
-      checklist/script for reuse next time).
+      checklist/script for reuse next time). Two follow-up fixes
+      (`fix/deploy-aws-oidc-environment-subject` and this doc wrap-up)
+      also PR'd into `develop`.
