@@ -44,12 +44,14 @@ jobs:
           done
 
       # Assumes the OIDC identity provider and AWS_DEPLOY_ROLE_ARN repo
-      # variable already exist — see specs/05-cicd-pipeline.md's manual
-      # AWS Console runbook (one-time setup, not automated here).
+      # secret already exist — see specs/05-cicd-pipeline.md's manual
+      # AWS Console runbook (one-time setup, not automated here). Stored
+      # as a secret, not a variable, so it's masked in logs — see
+      # specs/05-cicd-pipeline.md's public-repo addendum.
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: sa-east-1
 
       - name: Set up Terraform

@@ -85,9 +85,22 @@ Two new GitHub Actions workflows on top of the existing `ci.yml`
    `terraform/bootstrap/` root (which just relocates the "whose state is
    this and who applies it" question one level down), this is a manual,
    one-time AWS Console procedure — see the runbook below. The resulting
-   role ARN gets stored as a repo variable (`AWS_DEPLOY_ROLE_ARN`, not a
-   secret — role ARNs aren't sensitive) for `deploy-aws.yml` to
-   reference.
+   role ARN gets stored as a repo secret (`AWS_DEPLOY_ROLE_ARN`) for
+   `deploy-aws.yml` to reference — see the public-repo addendum below for
+   why this is a secret and not a variable.
+
+   **Addendum — revisited when the repo went public:** originally stored
+   as a repo *variable*, on the reasoning that a role ARN isn't sensitive
+   by itself (the OIDC trust policy's `sub` condition, not secrecy of the
+   ARN, is what actually gates who can assume it). That's still true, but
+   variables — unlike secrets — aren't masked in Actions logs, and this
+   repo started private, where only the owner could see those logs
+   anyway. Once the repo went public, every historical `deploy-aws.yml`
+   run's logs became public too, plaintext ARN included, which also
+   reveals the AWS account ID. Switched to a secret at that point purely
+   to stop compounding the exposure going forward — the historical
+   private-era run logs already contain the plaintext value and that
+   can't be un-published short of deleting those runs.
 
 3. **`deploy-localstack.yml` reuses `docker-compose.yml` directly**
    (`docker compose up -d` as a workflow step) rather than reimplementing
@@ -200,8 +213,9 @@ own resources — is resource-scoped.)
 
 **4. Wire the role into GitHub**: copy the role's ARN from the IAM
 console, then in the repo: *Settings → Secrets and variables → Actions →
-Variables* → **New repository variable** → name `AWS_DEPLOY_ROLE_ARN`,
-value the role ARN.
+Secrets* → **New repository secret** → name `AWS_DEPLOY_ROLE_ARN`, value
+the role ARN. (Originally a *variable* — see the public-repo addendum to
+decision 2 above for why this is now a secret.)
 
 **5. Create the `aws-sandbox` GitHub Environment**: *Settings →
 Environments* → **New environment** → name `aws-sandbox`.
@@ -262,7 +276,7 @@ anyway.
 
 Steps: checkout → set up JDK 21 → `mvn package` both `services/*` modules
 → `aws-actions/configure-aws-credentials@v4` with
-`role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}` → `terraform init &&
+`role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}` → `terraform init &&
 terraform apply -auto-approve` in `envs/aws`. No destroy step (see
 decision 5).
 
@@ -287,7 +301,7 @@ on any assertion failure or timeout (default timeout: 30s, polling every
 ## Definition of done
 
 - [ ] OIDC identity provider + deploy role created via the AWS Console
-      runbook above; `AWS_DEPLOY_ROLE_ARN` repo variable set from the
+      runbook above; `AWS_DEPLOY_ROLE_ARN` repo secret set from the
       role's ARN.
 - [ ] `aws-sandbox` GitHub Environment created. Required reviewer
       deliberately not configured — unavailable on this repo's
