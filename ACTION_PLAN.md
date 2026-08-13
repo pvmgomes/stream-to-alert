@@ -97,6 +97,52 @@ architecture this plan builds toward.
   no cost).
 - Spec: not required — this is a runbook note, not a feature.
 
+### Cleanup
+
+`deploy-aws.yml` runs `terraform apply` on an ephemeral GitHub Actions
+runner with no backend configured — this project uses local state by
+design (see the tech stack table in `CLAUDE.md`), so whatever state that
+apply produces is discarded when the job ends. The resources it created
+are real and billed, but no local `terraform` command knows they exist:
+a plain local `terraform destroy` right after a CI-driven deploy sees
+empty state and reports nothing to do, **without deleting anything** —
+a false negative, not a no-op.
+
+The teardown procedure is therefore **import, then destroy**, run from a
+machine with real-AWS credentials active (same assumption as
+`scripts/smoke-test-aws.sh`):
+
+1. `scripts/import-real-aws-state.sh` — looks up every resource
+   `terraform/envs/aws/main.tf` declares by its actual AWS-assigned ID
+   (queue URLs, subscription ARNs, event-source-mapping UUIDs, ...) and
+   `terraform import`s it into a fresh local `.tfstate`. Read-only against
+   AWS (import only reads and records state, never creates/modifies/
+   deletes); safe to re-run, and skips anything already in state.
+2. `cd terraform/envs/aws && terraform plan` — review before destroying.
+   Expect `0 to add, 0 to destroy`, with only in-place diffs on
+   computed/local-only attributes (Lambda `filename`/`source_code_hash`
+   from the local jar, `publish`, SNS subscription confirmation
+   defaults) — none of that matters for a destroy. Any planned **add**
+   or **destroy**, or a resource `import` couldn't find, means stop and
+   investigate rather than proceeding.
+3. `terraform destroy` — the actual deletion. Run this manually, not from
+   a script, and only after reading the plan output — same
+   explicit-go-ahead bar as any other real-AWS action in this project.
+4. Spot-check the account is clean:
+   `aws dynamodb list-tables`, `aws sns list-topics`,
+   `aws sqs list-queues`, `aws lambda list-functions` (all `--region
+   sa-east-1`) should show nothing from this stack.
+
+This is the general procedure for **any** session where `deploy-aws.yml`
+was the last thing to apply — not a one-off for this particular session.
+If a future phase adds resources to `terraform/envs/aws/main.tf`, extend
+`scripts/import-real-aws-state.sh` with a matching `import` call rather
+than falling back to manual AWS CLI deletion.
+
+LocalStack teardown needs none of this — `docker compose down` (or just
+letting the container stop) discards everything, and its state file
+lives in the repo-local `terraform/envs/localstack/` directory anyway.
+
 ---
 
 ## Explicitly out of scope for this plan
